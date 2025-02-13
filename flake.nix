@@ -15,32 +15,64 @@
       system: let
         pkgs = import nixpkgs {inherit system;};
 
-        go-apt-cacher = pkgs.buildGoModule {
-          name = "aptutil";
-          src = self;
-          vendorHash = "sha256-cN3zTbVKf3cBdE1yAIwHWL61I0a6spwlawKTXQCWYJA=";
-
-          nativeBuildInputs = [pkgs.git];
-          subPackages = ["cmd/go-apt-cacher"]; # Only build the apt-cache part
-        };
-
-        docker = pkgs.dockerTools.buildLayeredImage {
-          name = "aptutil-docker";
-          tag = "latest";
-          contents = [go-apt-cacher];
-          config = {
-            Entrypoint = ["/go-apt-cacher"];
-            ExposedPorts = {"3142/tcp" = {};};
+        go-apt-cacher = targetSystem: let
+          arch =
+            if targetSystem == "x86_64-linux"
+            then "amd64"
+            else "arm64";
+        in
+          pkgs.buildGoModule {
+            name = "aptutil";
+            src = self;
+            subPackages = ["cmd/go-apt-cacher"];
+            arch = arch;
+            vendorHash = "sha256-cN3zTbVKf3cBdE1yAIwHWL61I0a6spwlawKTXQCWYJA=";
+            env = {CGO_ENABLED = 0;};
           };
-        };
+
+        docker-image = targetSystem: content: let
+          arch =
+            if targetSystem == "x86_64-linux"
+            then "amd64"
+            else "arm64";
+        in
+          pkgs.dockerTools.buildLayeredImage {
+            name = "ghcr.io/jlevere/aptutil";
+            tag = "latest-${arch}";
+            contents = [
+              pkgs.cacert
+              content
+            ];
+            config = {
+              Entrypoint = ["/bin/go-apt-cacher"];
+              ExposedPorts = {"3142/tcp" = {};};
+              Labels = {
+                "org.opencontainers.image.architecture" = arch;
+              };
+            };
+          };
       in {
-        packages = {
-          go-apt-cacher = go-apt-cacher;
-          docker = docker;
+        packages = rec {
+          go-arm64 = go-apt-cacher "aarch64-linux";
+          go-amd64 = go-apt-cacher "x86_64-linux";
+          "arm64" = docker-image "aarch64-linux" go-arm64;
+          "amd64" = docker-image "x86_64-linux" go-amd64;
         };
 
         devShells.default = pkgs.mkShell {
           packages = with pkgs; [go gotools gopls];
+        };
+
+        apps.createManifest = {
+          type = "app";
+          program = pkgs.writeShellScript "create-manifest" ''
+            #!/bin/sh
+            ${pkgs.docker}/bin/docker manifest create ghcr.io/jlevere/aptutil:latest \
+              --amend ghcr.io/jlevere/aptutil:latest-amd64 \
+              --amend ghcr.io/jlevere/aptutil:latest-arm64
+
+            ${pkgs.docker}/bin/docker manifest push ghcr.io/jlevere/aptutil:latest
+          '';
         };
       }
     );

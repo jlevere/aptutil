@@ -17,3 +17,5 @@ tags
 # Archives
 pkg/
 *.tgz
+
+result

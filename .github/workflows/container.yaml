@@ -1,0 +1,65 @@
+name: Build and Publish Container
+
+on:
+  push:
+    paths:
+      - apt
+      - cacher
+      - cmd
+      - go.sum
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install nix
+        uses: DeterminateSystems/nix-installer-action@main
+        with:
+          github-token: ${{ github.token }}
+
+      - name: Run the Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Generate variables
+        id: vars
+        run: |
+          echo "DATE=$(date +%Y-%m-%d)" >> $GITHUB_ENV
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build go apt cache docker image
+        run: |
+          nix build .#amd64 -o amd-img
+          nix build .#arm64 -o arm-img
+
+      - name: Push images to registry
+        run: |
+          docker push ${{ IMAGE_NAME }}:latest-amd64
+          docker push ${{ IMAGE_NAME }}:latest-arm64
+
+      - name: Create multiarch manifest
+        run: |
+          docker manifest create ${{ IMAGE_NAME }}:latest \
+            --amend ${{ IMAGE_NAME }}:latest-amd64 \
+            --amend ${{ IMAGE_NAME }}:latest-arm64
+
+      - name: Push manifest
+        run: |
+          docker manifest push ${{ IMAGE_NAME }}:latest
