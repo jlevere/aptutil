@@ -6,6 +6,17 @@
 **go-apt-cacher** is a caching reverse proxy built specially for Debian (APT) repositories.  
 This repository also contains a mirroring utility **go-apt-mirror**.
 
+
+# NOTE from jlevere
+
+This fork is purely because of the lack of `go.sum` file in the source.
+
+This fork uses a `nix` flake to bulid a multiarch docker image that can be used to run the application.  [![Build and Publish Container](https://github.com/jlevere/aptutil/actions/workflows/container.yaml/badge.svg)](https://github.com/jlevere/aptutil/actions/workflows/container.yaml)
+
+I run this project in my homelab so I will try to track the main repo.
+
+## The rest of the original readme
+
 Blog: [Introducing go-apt-cacher and go-apt-mirror](http://ymmt2005.hatenablog.com/entry/2016/07/19/Introducing_go-apt-cacher_and_go-apt-mirror)
 
 Status
