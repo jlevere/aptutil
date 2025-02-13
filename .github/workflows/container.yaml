@@ -40,7 +40,7 @@ jobs:
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ REGISTRY }}
+          registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -51,15 +51,15 @@ jobs:
 
       - name: Push images to registry
         run: |
-          docker push ${{ IMAGE_NAME }}:latest-amd64
-          docker push ${{ IMAGE_NAME }}:latest-arm64
+          docker push $IMAGE_NAME:latest-amd64
+          docker push $IMAGE_NAME:latest-arm64
 
       - name: Create multiarch manifest
         run: |
-          docker manifest create ${{ IMAGE_NAME }}:latest \
-            --amend ${{ IMAGE_NAME }}:latest-amd64 \
-            --amend ${{ IMAGE_NAME }}:latest-arm64
+          docker manifest create $IMAGE_NAME:latest \
+            --amend $IMAGE_NAME:latest-amd64 \
+            --amend $IMAGE_NAME:latest-arm64
 
       - name: Push manifest
         run: |
-          docker manifest push ${{ IMAGE_NAME }}:latest
+          docker manifest push $IMAGE_NAME:latest
