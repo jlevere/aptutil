@@ -49,6 +49,11 @@ jobs:
           nix build .#amd64 -o amd-img
           nix build .#arm64 -o arm-img
 
+      - name: Load images into docker
+        run: |
+          docker load < amd-img
+          docker load < arm-img
+
       - name: Push images to registry
         run: |
           docker push $IMAGE_NAME:latest-amd64
