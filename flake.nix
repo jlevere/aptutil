@@ -15,7 +15,7 @@
       system: let
         pkgs = import nixpkgs {inherit system;};
 
-        go-apt-cacher = targetSystem: let
+        go-apt-cacher = targetSystem: pkgs: let
           arch =
             if targetSystem == "x86_64-linux"
             then "amd64"
@@ -53,8 +53,8 @@
           };
       in {
         packages = rec {
-          go-arm64 = go-apt-cacher "aarch64-linux";
-          go-amd64 = go-apt-cacher "x86_64-linux";
+          go-arm64 = go-apt-cacher "aarch64-linux" pkgs.pkgsCross.aarch64-multiplatform;
+          go-amd64 = go-apt-cacher "x86_64-linux" pkgs;
           "arm64" = docker-image "aarch64-linux" go-arm64;
           "amd64" = docker-image "x86_64-linux" go-amd64;
         };
