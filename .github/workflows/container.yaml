@@ -44,15 +44,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build go apt cache docker image
+      - name: Build and load arm64 img
         run: |
-          nix build .#amd64 -o amd-img
-          nix build .#arm64 -o arm-img
+          nix build .#arm64
+          docker load < result
 
-      - name: Load images into docker
+      - name: Build and load amd64 img
         run: |
-          docker load < amd-img
-          docker load < arm-img
+          nix build .#amd64
+          docker load < result
 
       - name: Push images to registry
         run: |
